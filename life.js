@@ -116,6 +116,8 @@ let animationInterval = null;
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const stepBtn = document.getElementById("stepBtn");
+const timerInput = document.getElementById("timerInput");
+let timer = 500; // Default timer interval in ms
 
 function step() {
   process(currentGrid, newGrid);
@@ -132,7 +134,8 @@ function startAnimation() {
     startBtn.disabled = true;
     stopBtn.disabled = false;
     stepBtn.disabled = true;
-    animationInterval = setInterval(step, 1000); // 1000ms for smoother animation
+    timer = parseInt(timerInput.value, 10) || 500;
+    animationInterval = setInterval(step, timer);
   }
 }
 
@@ -145,6 +148,15 @@ function stopAnimation() {
     stepBtn.disabled = false;
   }
 }
+
+// Update timer interval when input changes
+timerInput.addEventListener("change", () => {
+  timer = parseInt(timerInput.value, 10) || 500;
+  if (animationInterval) {
+    clearInterval(animationInterval);
+    animationInterval = setInterval(step, timer);
+  }
+});
 
 // Initialize with random values
 for (let x = 0; x < gridX; x++) {
