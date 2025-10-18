@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Life</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: black;
+      }
+      #gridContainer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 50px;
+      }
+      #controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+      }
+      button {
+        padding: 8px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background: #333;
+        color: white;
+        border: 1px solid #666;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #444;
+      }
+      button:disabled {
+        background: #222;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="gridContainer"></div>
+    <div id="controls">
+      <button id="startBtn">Start</button>
+      <button id="stopBtn">Stop</button>
+      <button id="stepBtn">Step</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <script src="life.js"></script>
+  </body>
+</html>
