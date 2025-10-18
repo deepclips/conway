@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
+    />
     <title>Life</title>
     <style>
       body,
@@ -17,36 +20,66 @@
         top: 0;
         left: 0;
         right: 0;
-        bottom: 50px;
+        bottom: 70px;
+        touch-action: manipulation;
+        -webkit-overflow-scrolling: touch;
+        overflow: auto;
       }
       #controls {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        height: 50px;
-        background: rgba(0, 0, 0, 0.8);
+        min-height: 70px;
+        background: rgba(0, 0, 0, 0.92);
         display: flex;
+        flex-wrap: wrap;
         justify-content: center;
         align-items: center;
-        gap: 20px;
+        gap: 12px;
+        z-index: 10;
+        padding: 8px 0;
       }
-      button {
-        padding: 8px 20px;
-        font-size: 16px;
+      button,
+      input[type="number"] {
+        padding: 14px 24px;
+        font-size: 20px;
         cursor: pointer;
         background: #333;
         color: white;
-        border: 1px solid #666;
-        border-radius: 4px;
+        border: 1.5px solid #666;
+        border-radius: 6px;
         transition: background 0.2s;
+        outline: none;
+        box-sizing: border-box;
       }
-      button:hover {
+      button:hover,
+      input[type="number"]:focus {
         background: #444;
       }
       button:disabled {
         background: #222;
         cursor: not-allowed;
+      }
+      label {
+        font-size: 18px;
+        color: #fff;
+      }
+      @media (max-width: 600px) {
+        #controls {
+          flex-direction: column;
+          gap: 8px;
+          min-height: 110px;
+        }
+        button,
+        input[type="number"] {
+          width: 90vw;
+          max-width: 350px;
+          font-size: 22px;
+        }
+        label {
+          font-size: 20px;
+        }
       }
     </style>
   </head>

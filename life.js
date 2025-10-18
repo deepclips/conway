@@ -52,12 +52,35 @@ function displayGrid() {
       }; background-color: ${
         currentGrid[x][y] ? "black" : "white"
       }; width: ${CELL_SIZE}px; height: ${CELL_SIZE}px; padding: 0;`;
-      gridHTML += `<td style="${cellStyle}" onclick="handleCellClick(${x}, ${y})"></td>`;
+      gridHTML += `<td data-x="${x}" data-y="${y}" style="${cellStyle}"></td>`;
     }
     gridHTML += "</tr>";
   }
   gridHTML += "</table>";
-  document.getElementById("gridContainer").innerHTML = gridHTML;
+  const gridContainer = document.getElementById("gridContainer");
+  gridContainer.innerHTML = gridHTML;
+
+  // Add event listeners for click and touch
+  if (!animationInterval) {
+    const cells = gridContainer.querySelectorAll("td");
+    cells.forEach((cell) => {
+      cell.addEventListener("click", function (e) {
+        const x = parseInt(cell.getAttribute("data-x"), 10);
+        const y = parseInt(cell.getAttribute("data-y"), 10);
+        handleCellClick(x, y);
+      });
+      cell.addEventListener(
+        "touchstart",
+        function (e) {
+          e.preventDefault();
+          const x = parseInt(cell.getAttribute("data-x"), 10);
+          const y = parseInt(cell.getAttribute("data-y"), 10);
+          handleCellClick(x, y);
+        },
+        { passive: false }
+      );
+    });
+  }
 }
 
 const getNumberOfNeighbors = (x, y) => {
