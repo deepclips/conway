@@ -7,6 +7,7 @@ const MOBILE_BREAKPOINT = 600;
 // DOM refs (available once script loads at end of body)
 const gridContainer = document.getElementById("gridContainer");
 const controlsEl = document.getElementById("controls");
+const patternSelect = document.getElementById("patternSelect");
 
 // Dynamic state
 let CELL_SIZE = BASE_CELL_SIZE;
@@ -273,3 +274,172 @@ if (window.visualViewport) {
   startBtn.disabled = false;
   stepBtn.disabled = false;
 })();
+
+// Patterns logic
+const PATTERNS = {
+  glider: [
+    [1, 0],
+    [2, 1],
+    [0, 2],
+    [1, 2],
+    [2, 2],
+  ],
+  lwss: [
+    [1, 0],
+    [4, 0],
+    [0, 1],
+    [0, 2],
+    [4, 2],
+    [0, 3],
+    [1, 3],
+    [2, 3],
+    [3, 3],
+  ],
+  pulsar: [
+    [2, 0],
+    [3, 0],
+    [4, 0],
+    [8, 0],
+    [9, 0],
+    [10, 0],
+    [0, 2],
+    [5, 2],
+    [7, 2],
+    [12, 2],
+    [0, 3],
+    [5, 3],
+    [7, 3],
+    [12, 3],
+    [0, 4],
+    [5, 4],
+    [7, 4],
+    [12, 4],
+    [2, 5],
+    [3, 5],
+    [4, 5],
+    [8, 5],
+    [9, 5],
+    [10, 5],
+    [2, 7],
+    [3, 7],
+    [4, 7],
+    [8, 7],
+    [9, 7],
+    [10, 7],
+    [0, 8],
+    [5, 8],
+    [7, 8],
+    [12, 8],
+    [0, 9],
+    [5, 9],
+    [7, 9],
+    [12, 9],
+    [0, 10],
+    [5, 10],
+    [7, 10],
+    [12, 10],
+    [2, 12],
+    [3, 12],
+    [4, 12],
+    [8, 12],
+    [9, 12],
+    [10, 12],
+  ],
+  gosper: [
+    [1, 5],
+    [2, 5],
+    [1, 6],
+    [2, 6],
+    [13, 3],
+    [14, 3],
+    [12, 4],
+    [16, 4],
+    [11, 5],
+    [17, 5],
+    [11, 6],
+    [15, 6],
+    [17, 6],
+    [18, 6],
+    [11, 7],
+    [17, 7],
+    [12, 8],
+    [16, 8],
+    [13, 9],
+    [14, 9],
+    [23, 1],
+    [24, 1],
+    [22, 2],
+    [26, 2],
+    [21, 3],
+    [27, 3],
+    [21, 4],
+    [25, 4],
+    [27, 4],
+    [28, 4],
+    [21, 5],
+    [27, 5],
+    [22, 6],
+    [26, 6],
+    [23, 7],
+    [24, 7],
+    [35, 3],
+    [36, 3],
+    [35, 4],
+    [36, 4],
+  ],
+  rpentomino: [
+    [1, 0],
+    [2, 0],
+    [0, 1],
+    [1, 1],
+    [1, 2],
+  ],
+  diehard: [
+    [6, 0],
+    [0, 1],
+    [1, 1],
+    [1, 2],
+    [5, 2],
+    [6, 2],
+    [7, 2],
+  ],
+  acorn: [
+    [1, 0],
+    [3, 1],
+    [0, 2],
+    [1, 2],
+    [4, 2],
+    [5, 2],
+    [6, 2],
+  ],
+};
+
+function placePattern(patternName) {
+  if (!PATTERNS[patternName]) return;
+  // Center pattern in grid
+  const pattern = PATTERNS[patternName];
+  const maxX = Math.max(...pattern.map(([x]) => x));
+  const maxY = Math.max(...pattern.map(([, y]) => y));
+  const offsetX = Math.floor((gridX - maxX - 1) / 2);
+  const offsetY = Math.floor((gridY - maxY - 1) / 2);
+  // Clear grid
+  for (let x = 0; x < gridX; x++)
+    for (let y = 0; y < gridY; y++) currentGrid[x][y] = false;
+  // Place pattern
+  pattern.forEach(([dx, dy]) => {
+    const x = offsetX + dx;
+    const y = offsetY + dy;
+    if (x >= 0 && x < gridX && y >= 0 && y < gridY) {
+      currentGrid[x][y] = true;
+    }
+  });
+  displayGrid();
+}
+
+patternSelect &&
+  patternSelect.addEventListener("change", (e) => {
+    if (e.target.value !== "none") {
+      placePattern(e.target.value);
+      patternSelect.value = "none";
+    }
+  });

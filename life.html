@@ -12,7 +12,21 @@
   <body>
     <div id="gridContainer"></div>
 
-    <div id="controls">
+    <div id="patternMenu" style="width:100%;display:flex;justify-content:center;align-items:center;margin:12px 0 0 0;">
+      <label for="patternSelect" style="color:white;font-size:16px;margin-right:8px;">Pattern:</label>
+      <select id="patternSelect" style="font-size:16px;padding:8px 12px;border-radius:6px;min-width:180px;">
+        <option value="none">-- Select Pattern --</option>
+        <option value="glider">Glider</option>
+        <option value="lwss">Lightweight Spaceship (LWSS)</option>
+        <option value="pulsar">Pulsar</option>
+        <option value="gosper">Gosper Glider Gun</option>
+        <option value="rpentomino">R-pentomino</option>
+        <option value="diehard">Diehard</option>
+        <option value="acorn">Acorn</option>
+      </select>
+    </div>
+
+    <!-- ...existing code... -->
       <div class="button-pair">
         <button id="startBtn">Start</button>
         <button id="stopBtn">Stop</button>
