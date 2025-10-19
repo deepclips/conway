@@ -2,37 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
-    />
-    <title>Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Life (Direct Resolution Input)</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div id="gridContainer"></div>
+    <div id="gridContainer">
+      <!-- Pure red text overlay (no box) -->
+      <div id="resolutionOverlay"></div>
+    </div>
 
     <div id="controls">
-      <div class="button-pair">
-        <button id="startBtn">Start</button>
-        <button id="stopBtn">Stop</button>
+      <button id="startBtn" class="control-btn">Start</button>
+      <button id="stopBtn" class="control-btn">Stop</button>
+
+      <button id="stepBtn" class="control-btn">Step</button>
+      <button id="clearBtn" class="control-btn">Clear</button>
+
+      <button id="randomBtn" class="control-btn">Randomize</button>
+      <button id="decreaseBtn" class="control-btn size-btn">−</button>
+      <button id="increaseBtn" class="control-btn size-btn">+</button>
+
+      <!-- Timer inline with buttons -->
+      <div class="timer-inline">
+        <label for="timerInput">Timer:</label>
+        <input id="timerInput" type="number" min="50" max="5000" value="500" />
       </div>
-      <div class="button-pair">
-        <button id="stepBtn">Step</button>
-        <button id="clearBtn">Clear</button>
-      </div>
-      <div class="button-pair">
-        <button id="randomBtn">Randomize</button>
-        <div class="timer-group">
-          <label for="timerInput">Timer (ms):</label>
-          <input
-            id="timerInput"
-            type="number"
-            min="50"
-            max="5000"
-            value="500"
-          />
-        </div>
+
+      <!-- Direct resolution input (single field) -->
+      <div class="resolution-inline">
+        <label for="resolutionInput" title="Enter as cols×rows, e.g., 40x25">Res:</label>
+        <input id="resolutionInput" type="text" placeholder="40x25" />
       </div>
     </div>
 
