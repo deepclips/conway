@@ -1,6 +1,8 @@
 // Calculate grid dimensions based on window size
-const CELL_SIZE = 30; // Size of each cell in pixels (doubled from 15 to 30)
-const CONTROLS_HEIGHT = 70; // px, must match CSS
+const BASE_CELL_SIZE = 30;
+const MOBILE_BREAKPOINT = 600;
+const CONTROLS_HEIGHT = window.innerWidth <= MOBILE_BREAKPOINT ? 180 : 90; // More space for controls on mobile
+let CELL_SIZE = window.innerWidth <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE; // Smaller cells on mobile
 let gridX = Math.floor(window.innerWidth / CELL_SIZE);
 let gridY = Math.floor((window.innerHeight - CONTROLS_HEIGHT) / CELL_SIZE);
 let currentGrid = Array(gridX)
@@ -12,8 +14,10 @@ let newGrid = Array(gridX)
 
 // Recalculate grid on window resize
 window.addEventListener("resize", () => {
+  CELL_SIZE = window.innerWidth <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
+  const controlsHeight = window.innerWidth <= MOBILE_BREAKPOINT ? 180 : 90;
   gridX = Math.floor(window.innerWidth / CELL_SIZE);
-  gridY = Math.floor((window.innerHeight - CONTROLS_HEIGHT) / CELL_SIZE);
+  gridY = Math.floor((window.innerHeight - controlsHeight) / CELL_SIZE);
 
   currentGrid = Array(gridX)
     .fill()
