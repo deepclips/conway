@@ -37,19 +37,19 @@
       }
       #controls {
         flex: 0 0 auto;
-        width: 100vw;
-        min-height: 70px;
-        background: rgba(0, 0, 0, 0.92);
+        width: 100%;
+        background: rgba(0, 0, 0, 0.95);
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
         align-items: center;
-        gap: 12px;
-        padding: 8px;
+        gap: 8px;
+        padding: 12px;
+        box-sizing: border-box;
       }
       button {
         padding: 12px 20px;
-        font-size: 18px;
+        font-size: 16px;
         cursor: pointer;
         background: #333;
         color: white;
@@ -81,7 +81,6 @@
       label {
         color: white;
         font-size: 16px;
-        margin: 0 4px;
       }
       .button-pair {
         display: flex;
@@ -91,17 +90,23 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 0 8px;
       }
       @media (max-width: 600px) {
+        body {
+          height: -webkit-fill-available;
+        }
         #controls {
-          gap: 8px;
-          padding: 8px;
+          padding: 16px;
+          padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
         }
         .button-pair {
           width: 100%;
           max-width: 400px;
           justify-content: center;
+          margin-bottom: 8px;
+        }
+        .button-pair:last-child {
+          margin-bottom: 0;
         }
         .button-pair button {
           flex: 1;
@@ -109,7 +114,11 @@
         .timer-group {
           width: 100%;
           justify-content: center;
-          padding: 8px 0;
+          padding: 4px 0;
+        }
+        #timerInput {
+          width: 100px;
+          margin: 0 8px;
         }
       }
     </style>
