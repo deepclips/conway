@@ -8,22 +8,29 @@
     />
     <title>Life</title>
     <style>
+      /* Base layout */
       html,
       body {
         margin: 0;
         padding: 0;
+        /* Use dynamic viewport height on mobile; fallback to 100vh */
         height: 100vh;
+        height: 100dvh;
         width: 100vw;
         background: black;
         box-sizing: border-box;
+        /* Avoid overlap with Android/iOS system bars */
+        padding-bottom: env(safe-area-inset-bottom);
       }
+
       body {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        width: 100vw;
+        /* We'll keep scroll disabled; JS pins body height to visual viewport */
         overflow: hidden;
       }
+
+      /* Grid area grows to fill remaining space above controls */
       #gridContainer {
         flex: 1 1 auto;
         width: 100vw;
@@ -35,140 +42,9 @@
         align-items: center;
         justify-content: center;
       }
+
+      /* Controls bar */
       #controls {
         flex: 0 0 auto;
         width: 100%;
-        background: rgba(0, 0, 0, 0.95);
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        padding: 12px;
-        box-sizing: border-box;
-      }
-      @media (max-width: 600px) {
-        #controls {
-          padding: 15px;
-          flex-direction: column;
-          align-items: stretch;
-          height: auto;
-        }
-        button {
-          margin: 5px 0;
-          padding: 12px;
-          font-size: 16px;
-        }
-      }
-      button {
-        padding: 12px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        background: #333;
-        color: white;
-        border: 1.5px solid #666;
-        border-radius: 6px;
-        transition: background 0.2s;
-        outline: none;
-        box-sizing: border-box;
-        min-width: 100px;
-        touch-action: manipulation;
-      }
-      @media (max-width: 600px) {
-        button {
-          padding: 15px;
-          font-size: 18px;
-          min-height: 48px;
-        }
-      }
-      #timerInput {
-        padding: 8px;
-        font-size: 16px;
-        background: #333;
-        color: white;
-        border: 1.5px solid #666;
-        border-radius: 6px;
-        width: 80px;
-        text-align: center;
-      }
-      button:hover,
-      #timerInput:focus {
-        background: #444;
-      }
-      button:disabled {
-        background: #222;
-        cursor: not-allowed;
-      }
-      label {
-        color: white;
-        font-size: 16px;
-      }
-      .button-pair {
-        display: flex;
-        gap: 8px;
-      }
-      .timer-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      @media (max-width: 600px) {
-        body {
-          height: -webkit-fill-available;
-        }
-        #controls {
-          padding: 16px;
-          padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-        }
-        .button-pair {
-          width: 100%;
-          max-width: 400px;
-          justify-content: center;
-          margin-bottom: 8px;
-        }
-        .button-pair:last-child {
-          margin-bottom: 0;
-        }
-        .button-pair button {
-          flex: 1;
-        }
-        .timer-group {
-          width: 100%;
-          justify-content: center;
-          padding: 4px 0;
-        }
-        #timerInput {
-          width: 100px;
-          margin: 0 8px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="gridContainer"></div>
-    <div id="controls">
-      <div class="button-pair">
-        <button id="startBtn">Start</button>
-        <button id="stopBtn">Stop</button>
-      </div>
-      <div class="button-pair">
-        <button id="stepBtn">Step</button>
-        <button id="clearBtn">Clear</button>
-      </div>
-      <div class="button-pair">
-        <button id="randomBtn">Randomize</button>
-        <div class="timer-group">
-          <label for="timerInput">Timer (ms):</label>
-          <input
-            id="timerInput"
-            type="number"
-            min="50"
-            max="5000"
-            value="500"
-          />
-        </div>
-      </div>
-    </div>
-    <script src="life.js"></script>
-  </body>
-</html>
+        ba

@@ -1,71 +1,57 @@
-// Calculate grid dimensions based on window size and visual viewport
+// ===== Responsive sizing + Android address-bar safe layout =====
+
+// Visual constants
 const BASE_CELL_SIZE = 30;
 const MOBILE_BREAKPOINT = 600;
-const CONTROLS_HEIGHT = window.innerWidth <= MOBILE_BREAKPOINT ? 180 : 90; // More space for controls on mobile
-let CELL_SIZE = window.innerWidth <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE; // Smaller cells on mobile
-let gridX = Math.floor(window.visualViewport.width / CELL_SIZE);
-let gridY = Math.floor(
-  (window.visualViewport.height - CONTROLS_HEIGHT) / CELL_SIZE
-);
-let currentGrid = Array(gridX)
-  .fill()
-  .map(() => Array(gridY).fill(false));
-let newGrid = Array(gridX)
-  .fill()
-  .map(() => Array(gridY).fill(false));
 
-// Recalculate grid on window resize
-window.addEventListener("resize", () => {
-  CELL_SIZE =
-    window.visualViewport.width <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
-  const controlsHeight =
-    window.visualViewport.width <= MOBILE_BREAKPOINT ? 180 : 90;
-  gridX = Math.floor(window.visualViewport.width / CELL_SIZE);
-  gridY = Math.floor(
-    (window.visualViewport.height - controlsHeight) / CELL_SIZE
-  );
+// DOM refs (available once script loads at end of body)
+const gridContainer = document.getElementById("gridContainer");
+const controlsEl = document.getElementById("controls");
 
-  currentGrid = Array(gridX)
-    .fill()
-    .map(() => Array(gridY).fill(false));
-  newGrid = Array(gridX)
-    .fill()
-    .map(() => Array(gridY).fill(false));
+// Dynamic state
+let CELL_SIZE = BASE_CELL_SIZE;
+let gridX = 0;
+let gridY = 0;
+let currentGrid = [];
+let newGrid = [];
 
-  // Reinitialize with random values
-  for (let x = 0; x < gridX; x++) {
-    for (let y = 0; y < gridY; y++) {
-      currentGrid[x][y] = Math.random() < 0.5;
-    }
+// Get current viewport width/height in a robust way
+function vw() {
+  return (window.visualViewport && window.visualViewport.width) || window.innerWidth;
+}
+function vh() {
+  return (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+}
+
+// Compute cell size and grid dims based on real control height
+function computeGridDims() {
+  CELL_SIZE = vw() <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
+  const controlsHeight = controlsEl ? controlsEl.offsetHeight : 0;
+  const availableH = Math.max(0, vh() - controlsHeight);
+
+  gridX = Math.max(1, Math.floor(vw() / CELL_SIZE));
+  gridY = Math.max(1, Math.floor(availableH / CELL_SIZE));
+}
+
+// Pin the body height to the *visible* viewport to avoid Android cutoff
+function pinBodyToVisualViewport() {
+  if (window.visualViewport) {
+    document.body.style.height = `${vh()}px`;
+  } else {
+    // Fallback: rely on CSS 100dvh/100vh
+    document.body.style.height = "";
   }
+}
 
-  // Display the new grid immediately
-  displayGrid();
-});
+// Initialize/resize grid arrays
+function initGrids() {
+  currentGrid = Array.from({ length: gridX }, () => Array(gridY).fill(false));
+  newGrid = Array.from({ length: gridX }, () => Array(gridY).fill(false));
+}
 
-// Handle viewport changes (e.g., Android system UI showing/hiding)
-window.visualViewport.addEventListener("resize", () => {
-  CELL_SIZE =
-    window.visualViewport.width <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
-  const controlsHeight =
-    window.visualViewport.width <= MOBILE_BREAKPOINT ? 180 : 90;
-  gridX = Math.floor(window.visualViewport.width / CELL_SIZE);
-  gridY = Math.floor(
-    (window.visualViewport.height - controlsHeight) / CELL_SIZE
-  );
+// ===== Rendering and interaction =====
+let animationInterval = null;
 
-  // Update grid dimensions
-  currentGrid = Array(gridX)
-    .fill()
-    .map(() => Array(gridY).fill(false));
-  newGrid = Array(gridX)
-    .fill()
-    .map(() => Array(gridY).fill(false));
-
-  displayGrid();
-});
-
-// function to display grid in html
 function handleCellClick(x, y) {
   if (!animationInterval) {
     // Only allow clicking when animation is stopped
@@ -90,14 +76,13 @@ function displayGrid() {
     gridHTML += "</tr>";
   }
   gridHTML += "</table>";
-  const gridContainer = document.getElementById("gridContainer");
   gridContainer.innerHTML = gridHTML;
 
-  // Add event listeners for click and touch
+  // Add event listeners for click and touch only when not animating
   if (!animationInterval) {
     const cells = gridContainer.querySelectorAll("td");
     cells.forEach((cell) => {
-      cell.addEventListener("click", function (e) {
+      cell.addEventListener("click", function () {
         const x = parseInt(cell.getAttribute("data-x"), 10);
         const y = parseInt(cell.getAttribute("data-y"), 10);
         handleCellClick(x, y);
@@ -121,9 +106,7 @@ const getNumberOfNeighbors = (x, y) => {
   for (let i = x - 1; i <= x + 1; i++) {
     for (let j = y - 1; j <= y + 1; j++) {
       if (!(i === x && j === y)) {
-        if (getValue(i, j)) {
-          count++;
-        }
+        if (getValue(i, j)) count++;
       }
     }
   }
@@ -133,126 +116,5 @@ const getNumberOfNeighbors = (x, y) => {
 const getValue = (x, y) => {
   let adjustedX = x;
   let adjustedY = y;
-  if (x === -1) {
-    adjustedX = gridX - 1;
-  } else if (x === gridX) {
-    adjustedX = 0;
-  }
-  if (y === -1) {
-    adjustedY = gridY - 1;
-  } else if (y === gridY) {
-    adjustedY = 0;
-  }
-
-  return currentGrid[adjustedX][adjustedY];
-};
-
-const process = (oldgrid, newgrid) => {
-  for (let x = 0; x < gridX; x++) {
-    for (let y = 0; y < gridY; y++) {
-      const neighbors = getNumberOfNeighbors(x, y);
-      if (oldgrid[x][y]) {
-        if (neighbors < 2 || neighbors > 3) {
-          newgrid[x][y] = false;
-        } else {
-          newgrid[x][y] = true;
-        }
-      } else {
-        if (neighbors === 3) {
-          newgrid[x][y] = true;
-        } else {
-          newgrid[x][y] = false;
-        }
-      }
-    }
-  }
-};
-
-let animationInterval = null;
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-const stepBtn = document.getElementById("stepBtn");
-const timerInput = document.getElementById("timerInput");
-let timer = 500; // Default timer interval in ms
-
-function step() {
-  process(currentGrid, newGrid);
-  for (let x = 0; x < gridX; x++) {
-    for (let y = 0; y < gridY; y++) {
-      currentGrid[x][y] = newGrid[x][y];
-    }
-  }
-  displayGrid();
-}
-
-function startAnimation() {
-  if (!animationInterval) {
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    stepBtn.disabled = true;
-    timer = parseInt(timerInput.value, 10) || 500;
-    animationInterval = setInterval(step, timer);
-  }
-}
-
-function stopAnimation() {
-  if (animationInterval) {
-    clearInterval(animationInterval);
-    animationInterval = null;
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    stepBtn.disabled = false;
-    displayGrid();
-  }
-}
-
-// Update timer interval when input changes
-timerInput.addEventListener("change", () => {
-  timer = parseInt(timerInput.value, 10) || 500;
-  if (animationInterval) {
-    clearInterval(animationInterval);
-    animationInterval = setInterval(step, timer);
-  }
-});
-
-// Initialize with random values
-for (let x = 0; x < gridX; x++) {
-  for (let y = 0; y < gridY; y++) {
-    currentGrid[x][y] = Math.random() < 0.5;
-  }
-} // Initial display
-displayGrid();
-
-// Add a clear button and randomize button
-const clearBtn = document.getElementById("clearBtn");
-const randomBtn = document.getElementById("randomBtn");
-
-function clearGrid() {
-  for (let x = 0; x < gridX; x++) {
-    for (let y = 0; y < gridY; y++) {
-      currentGrid[x][y] = false;
-    }
-  }
-  displayGrid();
-}
-
-function randomizeGrid() {
-  for (let x = 0; x < gridX; x++) {
-    for (let y = 0; y < gridY; y++) {
-      currentGrid[x][y] = Math.random() < 0.5;
-    }
-  }
-  displayGrid();
-}
-
-// Set up button event listeners
-startBtn.addEventListener("click", startAnimation);
-stopBtn.addEventListener("click", stopAnimation);
-stepBtn.addEventListener("click", step);
-clearBtn && clearBtn.addEventListener("click", clearGrid);
-randomBtn && randomBtn.addEventListener("click", randomizeGrid);
-
-// Initialize in paused state
-stopBtn.disabled = true;
-startBtn.disabled = false;
-stepBtn.disabled = false;
+  if (x === -1) adjustedX = gridX - 1;
+  else if (x === gridX) adjusted
