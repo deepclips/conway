@@ -17,10 +17,15 @@ let newGrid = [];
 
 // Get current viewport width/height in a robust way
 function vw() {
-  return (window.visualViewport && window.visualViewport.width) || window.innerWidth;
+  return (
+    (window.visualViewport && window.visualViewport.width) || window.innerWidth
+  );
 }
 function vh() {
-  return (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  return (
+    (window.visualViewport && window.visualViewport.height) ||
+    window.innerHeight
+  );
 }
 
 // Compute cell size and grid dims based on real control height
@@ -117,4 +122,145 @@ const getValue = (x, y) => {
   let adjustedX = x;
   let adjustedY = y;
   if (x === -1) adjustedX = gridX - 1;
-  else if (x === gridX) adjusted
+  else if (x === gridX) adjustedX = 0;
+  if (y === -1) adjustedY = gridY - 1;
+  else if (y === gridY) adjustedY = 0;
+
+  return currentGrid[adjustedX][adjustedY];
+};
+
+const process = (oldgrid, newgrid) => {
+  for (let x = 0; x < gridX; x++) {
+    for (let y = 0; y < gridY; y++) {
+      const neighbors = getNumberOfNeighbors(x, y);
+      if (oldgrid[x][y]) {
+        newgrid[x][y] = !(neighbors < 2 || neighbors > 3);
+      } else {
+        newgrid[x][y] = neighbors === 3;
+      }
+    }
+  }
+};
+
+// ===== Controls =====
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const stepBtn = document.getElementById("stepBtn");
+const clearBtn = document.getElementById("clearBtn");
+const randomBtn = document.getElementById("randomBtn");
+const timerInput = document.getElementById("timerInput");
+
+let timer = 500; // ms
+
+function step() {
+  process(currentGrid, newGrid);
+  for (let x = 0; x < gridX; x++) {
+    for (let y = 0; y < gridY; y++) {
+      currentGrid[x][y] = newGrid[x][y];
+    }
+  }
+  displayGrid();
+}
+
+function startAnimation() {
+  if (!animationInterval) {
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    stepBtn.disabled = true;
+    timer = parseInt(timerInput.value, 10) || 500;
+    animationInterval = setInterval(step, timer);
+  }
+}
+
+function stopAnimation() {
+  if (animationInterval) {
+    clearInterval(animationInterval);
+    animationInterval = null;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    stepBtn.disabled = false;
+    displayGrid();
+  }
+}
+
+timerInput.addEventListener("change", () => {
+  timer = parseInt(timerInput.value, 10) || 500;
+  if (animationInterval) {
+    clearInterval(animationInterval);
+    animationInterval = setInterval(step, timer);
+  }
+});
+
+// ===== Resize / rotation / URL bar collapse handling =====
+function reflowAndRedraw({ randomize = false } = {}) {
+  pinBodyToVisualViewport();
+  computeGridDims();
+
+  // Rebuild grids to new size
+  const prevX = currentGrid.length;
+  const prevY = prevX ? currentGrid[0].length : 0;
+  const old = currentGrid;
+
+  initGrids();
+
+  // Optionally randomize; otherwise copy overlap region
+  if (randomize || !old.length) {
+    for (let x = 0; x < gridX; x++) {
+      for (let y = 0; y < gridY; y++) {
+        currentGrid[x][y] = Math.random() < 0.5;
+      }
+    }
+  } else {
+    const copyX = Math.min(prevX, gridX);
+    const copyY = Math.min(prevY, gridY);
+    for (let x = 0; x < copyX; x++) {
+      for (let y = 0; y < copyY; y++) {
+        currentGrid[x][y] = old[x][y];
+      }
+    }
+  }
+
+  displayGrid();
+}
+
+// Window resize (rotation, split-screen, etc.)
+window.addEventListener("resize", () => {
+  reflowAndRedraw(); // keep state if possible
+});
+
+// Address bar show/hide & keyboard: use visualViewport if available
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    reflowAndRedraw(); // keep state if possible
+  });
+  window.visualViewport.addEventListener("scroll", () => {
+    pinBodyToVisualViewport();
+  });
+}
+
+// ===== Init =====
+(function init() {
+  reflowAndRedraw({ randomize: true });
+
+  // Wire buttons
+  startBtn.addEventListener("click", startAnimation);
+  stopBtn.addEventListener("click", stopAnimation);
+  stepBtn.addEventListener("click", step);
+  clearBtn &&
+    clearBtn.addEventListener("click", () => {
+      for (let x = 0; x < gridX; x++)
+        for (let y = 0; y < gridY; y++) currentGrid[x][y] = false;
+      displayGrid();
+    });
+  randomBtn &&
+    randomBtn.addEventListener("click", () => {
+      for (let x = 0; x < gridX; x++)
+        for (let y = 0; y < gridY; y++) currentGrid[x][y] = Math.random() < 0.5;
+      displayGrid();
+    });
+
+  // Initialize paused state
+  stopBtn.disabled = true;
+  startBtn.disabled = false;
+  stepBtn.disabled = false;
+})();
