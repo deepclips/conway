@@ -1,12 +1,16 @@
-* { box-sizing: border-box; }
-html, body {
+* {
+  box-sizing: border-box;
+}
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100vw;
   height: 100vh;
   background: #000;
   overflow: hidden;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    sans-serif;
 }
 
 /* Grid */
@@ -34,6 +38,24 @@ html, body {
   user-select: none;
 }
 
+/* Generation and Population overlays: same color/size as resolutionOverlay, left aligned */
+#genOverlay,
+#popOverlay {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-weight: 900;
+  font-size: 56px;
+  color: #ff2d2d;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+#popOverlay {
+  top: 72px;
+}
+
 /* Controls */
 #controls {
   width: 100%;
@@ -41,7 +63,7 @@ html, body {
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px;
-  background: rgba(0,0,0,0.95);
+  background: rgba(0, 0, 0, 0.95);
   border-top: 1px solid #333;
 }
 
@@ -55,23 +77,31 @@ button {
   cursor: pointer;
   min-width: 130px;
 }
-button:hover { background: #444; }
-button:disabled { background: #222; cursor: not-allowed; }
+button:hover {
+  background: #444;
+}
+button:disabled {
+  background: #222;
+  cursor: not-allowed;
+}
 
 .control-btn {
   flex: 1 1 calc(50% - 8px);
 }
 
-/* Quarter-width +/− buttons */
+/* Size +/- buttons: two together should equal one control button in width */
 .size-btn {
+  /* Each button is half of the control button's calc(50% - 8px) basis: (50% - 8px)/2 = 25% - 4px */
   flex: 1 1 calc(25% - 8px);
-  min-width: 70px;
+  /* Ensure two size buttons don't exceed one control button's min-width (130px) */
+  min-width: 65px;
   font-size: 20px;
   font-weight: 800;
 }
 
 /* Timer and Resolution inline blocks */
-.timer-inline, .resolution-inline {
+.timer-inline,
+.resolution-inline {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +114,8 @@ button:disabled { background: #222; cursor: not-allowed; }
   flex: 1 1 calc(50% - 8px);
 }
 
-#timerInput, #resolutionInput {
+#timerInput,
+#resolutionInput {
   width: 110px;
   padding: 6px;
   background: #333;
@@ -96,7 +127,56 @@ button:disabled { background: #222; cursor: not-allowed; }
 }
 
 @media (min-width: 900px) {
-  .control-btn { flex: 0 1 220px; }
-  .size-btn { flex: 0 1 110px; }
-  .timer-inline, .resolution-inline { flex: 0 1 220px; }
+  .control-btn {
+    flex: 0 1 220px;
+  }
+  .size-btn {
+    flex: 0 1 106px;
+  }
+  .timer-inline,
+  .resolution-inline {
+    flex: 0 1 220px;
+  }
+}
+
+/* Modal for max-resolution warning */
+.modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+.modal.hidden {
+  display: none;
+}
+.modal-content {
+  background: #111;
+  color: #fff;
+  padding: 18px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  min-width: 280px;
+  text-align: center;
+}
+.modal-content #modalTitle {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.modal-content #modalBody {
+  margin-bottom: 12px;
+  color: #ddd;
+}
+.modal-content button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #ff2d2d;
+  color: #fff;
+  border: none;
+  cursor: pointer;
 }

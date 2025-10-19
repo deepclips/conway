@@ -8,8 +8,10 @@
   </head>
   <body>
     <div id="gridContainer">
-      <!-- Bold red overlay (no box) -->
+      <!-- Bold red overlays -->
       <div id="resolutionOverlay"></div>
+      <div id="genOverlay"></div>
+      <div id="popOverlay"></div>
     </div>
 
     <div id="controls">
@@ -31,8 +33,26 @@
 
       <!-- Direct resolution input (single field) -->
       <div class="resolution-inline">
-        <label for="resolutionInput" title="Enter as cols×rows, e.g., 40x25">Res:</label>
+        <label for="resolutionInput" title="Enter as cols×rows, e.g., 40x25"
+          >Res:</label
+        >
         <input id="resolutionInput" type="text" placeholder="40x25" />
+      </div>
+    </div>
+
+    <div
+      id="maxResModal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+      <div class="modal-content">
+        <div id="modalTitle">Max resolution</div>
+        <div id="modalBody">
+          Maximum allowed resolution is 200×200. Values were limited.
+        </div>
+        <button id="modalClose">Close</button>
       </div>
     </div>
 

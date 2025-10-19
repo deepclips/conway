@@ -1,30 +1,38 @@
 (function () {
   // ---- Config ----
-  const CELL_MIN = 3;      // 3px min => max density
-  const CELL_MAX = 80;     // generous upper bound
+  const CELL_MIN = 3; // 3px min => max density
+  const CELL_MAX = 80; // generous upper bound
+  const MAX_DIM = 200; // maximum columns/rows allowed
   const CELL_STEP = 2;
   const DEFAULT_CELL = 20;
-  const MIN_COLS = 5, MIN_ROWS = 5;
+  const MIN_COLS = 5,
+    MIN_ROWS = 5;
   const WIDTH_NARROW_THRESHOLD = 0.5; // 50% of viewport width
 
   // ---- Elements ----
-  const gridContainer = document.getElementById('gridContainer');
-  const controlsEl = document.getElementById('controls');
-  const startBtn = document.getElementById('startBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const stepBtn = document.getElementById('stepBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const randomBtn = document.getElementById('randomBtn');
-  const timerInput = document.getElementById('timerInput');
-  const increaseBtn = document.getElementById('increaseBtn');
-  const decreaseBtn = document.getElementById('decreaseBtn');
-  const resolutionEl = document.getElementById('resolutionOverlay');
-  const resolutionInput = document.getElementById('resolutionInput');
+  const gridContainer = document.getElementById("gridContainer");
+  const controlsEl = document.getElementById("controls");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const randomBtn = document.getElementById("randomBtn");
+  const timerInput = document.getElementById("timerInput");
+  const increaseBtn = document.getElementById("increaseBtn");
+  const decreaseBtn = document.getElementById("decreaseBtn");
+  const resolutionEl = document.getElementById("resolutionOverlay");
+  const genEl = document.getElementById("genOverlay");
+  const popEl = document.getElementById("popOverlay");
+  const resolutionInput = document.getElementById("resolutionInput");
 
   // ---- State ----
   let cellSize = DEFAULT_CELL;
-  let gridX = 1, gridY = 1;
-  let current = [], next = [];
+  let gridX = 1,
+    gridY = 1;
+  let current = [],
+    next = [];
+  let generation = 0;
+  let population = 0;
   let loop = null;
   let desiredResolution = null; // { cols, rows } if user set explicitly
   let widthPriorityActive = false; // prefer width-fit and allow vertical scroll
@@ -49,6 +57,12 @@
     startBtn.disabled = false;
     stopBtn.disabled = true;
     stepBtn.disabled = false;
+    // If a resize-triggered randomize is pending, cancel it so Stop doesn't
+    // unexpectedly randomize the board after the user pressed Stop.
+    if (typeof resizeEndTimer !== "undefined" && resizeEndTimer) {
+      clearTimeout(resizeEndTimer);
+      resizeEndTimer = null;
+    }
     draw();
   }
 
@@ -65,27 +79,47 @@
     let gx = Math.max(1, Math.floor(ww / cellSize));
     let gy = Math.max(1, Math.floor(hAvail / cellSize));
     if (gx < MIN_COLS || gy < MIN_ROWS) {
-      const fitCellFromWidth  = Math.floor(ww / MIN_COLS);
+      const fitCellFromWidth = Math.floor(ww / MIN_COLS);
       const fitCellFromHeight = Math.floor(hAvail / MIN_ROWS);
-      const newCell = clamp(Math.min(fitCellFromWidth, fitCellFromHeight), CELL_MIN, CELL_MAX);
+      const newCell = clamp(
+        Math.min(fitCellFromWidth, fitCellFromHeight),
+        CELL_MIN,
+        CELL_MAX
+      );
       if (newCell !== cellSize) cellSize = newCell;
       gx = Math.max(1, Math.floor(ww / cellSize));
       gy = Math.max(1, Math.floor(hAvail / cellSize));
     }
     cellSize = clamp(cellSize, CELL_MIN, CELL_MAX);
-    gridX = gx;
-    gridY = gy;
-    gridContainer.style.height = hAvail + 'px';
+    // Clamp maximum resolution per axis to avoid excessive cell counts
+    gridX = Math.min(gx, MAX_DIM);
+    gridY = Math.min(gy, MAX_DIM);
+    gridContainer.style.height = hAvail + "px";
   }
 
   function initArrays() {
     current = Array.from({ length: gridX }, () => Array(gridY).fill(false));
-    next    = Array.from({ length: gridX }, () => Array(gridY).fill(false));
+    next = Array.from({ length: gridX }, () => Array(gridY).fill(false));
   }
 
   function updateResolutionLabel() {
-    if (resolutionEl) resolutionEl.textContent = gridX + ' × ' + gridY;
-    if (resolutionInput) resolutionInput.value = gridX + 'x' + gridY;
+    if (resolutionEl) resolutionEl.textContent = gridX + " × " + gridY;
+    if (resolutionInput) resolutionInput.value = gridX + "x" + gridY;
+  }
+
+  function computePopulation() {
+    let count = 0;
+    for (let x = 0; x < gridX; x++) {
+      for (let y = 0; y < gridY; y++) {
+        if (current[x][y]) count++;
+      }
+    }
+    population = count;
+  }
+
+  function updateStats() {
+    if (genEl) genEl.textContent = "Gen: " + generation;
+    if (popEl) popEl.textContent = "Pop: " + population;
   }
 
   function draw() {
@@ -99,46 +133,71 @@
     if (widthPriorityActive) {
       // Fill width; allow vertical overflow/scroll
       scale = Math.min(1, scaleX);
-      gridContainer.style.overflow = 'auto';
+      gridContainer.style.overflow = "auto";
     } else {
       // Default: uniform fit
       scale = Math.min(1, scaleX, scaleY);
-      gridContainer.style.overflow = 'hidden';
+      gridContainer.style.overflow = "hidden";
     }
 
-    let html = '<div id="lifeWrap" style="transform:scale(' + scale.toFixed(4) + '); transform-origin:center center;">';
-    html += '<table id="lifeTable" border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">';
+    let html =
+      '<div id="lifeWrap" style="transform:scale(' +
+      scale.toFixed(4) +
+      '); transform-origin:center center;">';
+    html +=
+      '<table id="lifeTable" border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">';
     for (let y = 0; y < gridY; y++) {
-      html += '<tr>';
+      html += "<tr>";
       for (let x = 0; x < gridX; x++) {
         const alive = current[x][y];
-        html += '<td data-x="' + x + '" data-y="' + y + '" style="width:' + cellSize + 'px;height:' + cellSize + 'px;padding:0;background:' + (alive ? '#000' : '#fff') + '"></td>';
+        html +=
+          '<td data-x="' +
+          x +
+          '" data-y="' +
+          y +
+          '" style="width:' +
+          cellSize +
+          "px;height:" +
+          cellSize +
+          "px;padding:0;background:" +
+          (alive ? "#000" : "#fff") +
+          '"></td>';
       }
-      html += '</tr>';
+      html += "</tr>";
     }
-    html += '</table></div>';
+    html += "</table></div>";
 
     gridContainer.innerHTML = html;
-    gridContainer.appendChild(resolutionEl);
+    // Re-attach overlays (innerHTML cleared children)
+    if (resolutionEl) gridContainer.appendChild(resolutionEl);
+    if (genEl) gridContainer.appendChild(genEl);
+    if (popEl) gridContainer.appendChild(popEl);
 
     if (!isRunning()) {
-      gridContainer.querySelectorAll('td').forEach(td => {
-        td.addEventListener('click', () => {
-          const x = +td.getAttribute('data-x');
-          const y = +td.getAttribute('data-y');
+      gridContainer.querySelectorAll("td").forEach((td) => {
+        td.addEventListener("click", () => {
+          const x = +td.getAttribute("data-x");
+          const y = +td.getAttribute("data-y");
           current[x][y] = !current[x][y];
+          computePopulation();
           draw();
         });
-        td.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          const x = +td.getAttribute('data-x');
-          const y = +td.getAttribute('data-y');
-          current[x][y] = !current[x][y];
-          draw();
-        }, { passive: false });
+        td.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            const x = +td.getAttribute("data-x");
+            const y = +td.getAttribute("data-y");
+            current[x][y] = !current[x][y];
+            computePopulation();
+            draw();
+          },
+          { passive: false }
+        );
       });
     }
     updateResolutionLabel();
+    updateStats();
   }
 
   // Game of Life helpers
@@ -165,15 +224,22 @@
       for (let y = 0; y < gridY; y++) {
         const n = neighbors(x, y);
         if (current[x][y]) next[x][y] = !(n < 2 || n > 3);
-        else               next[x][y] = n === 3;
+        else next[x][y] = n === 3;
       }
     }
-    const tmp = current; current = next; next = tmp;
+    const tmp = current;
+    current = next;
+    next = tmp;
+    generation++;
+    computePopulation();
     draw();
   }
 
   function randomize() {
-    for (let x = 0; x < gridX; x++) for (let y = 0; y < gridY; y++) current[x][y] = Math.random() < 0.5;
+    for (let x = 0; x < gridX; x++)
+      for (let y = 0; y < gridY; y++) current[x][y] = Math.random() < 0.5;
+    generation = 0;
+    computePopulation();
   }
 
   function reflow({ keep = true, rand = false } = {}) {
@@ -190,21 +256,21 @@
 
       // Two candidate cell sizes:
       const cellByHeight = Math.floor(hAvail / rows);
-      const cellByWidth  = Math.floor(ww / cols);
+      const cellByWidth = Math.floor(ww / cols);
       // Width if we fit by height:
       const widthIfByHeight = cols * cellByHeight;
 
       // If height-fit would make visible width < threshold, prefer width-fit
       if (widthIfByHeight < ww * WIDTH_NARROW_THRESHOLD) {
         cellSize = clamp(cellByWidth, CELL_MIN, CELL_MAX);
-        widthPriorityActive = true;  // draw() will allow vertical scroll
+        widthPriorityActive = true; // draw() will allow vertical scroll
       } else {
         cellSize = clamp(cellByHeight, CELL_MIN, CELL_MAX);
       }
 
       gridX = cols;
       gridY = rows;
-      gridContainer.style.height = hAvail + 'px';
+      gridContainer.style.height = hAvail + "px";
     } else {
       computeDims();
     }
@@ -215,7 +281,8 @@
     else {
       const cx = Math.min(oldX, gridX);
       const cy = Math.min(oldY, gridY);
-      for (let x = 0; x < cx; x++) for (let y = 0; y < cy; y++) current[x][y] = old[x][y];
+      for (let x = 0; x < cx; x++)
+        for (let y = 0; y < cy; y++) current[x][y] = old[x][y];
     }
     draw();
   }
@@ -227,38 +294,52 @@
   }
 
   // Controls
-  startBtn.addEventListener('click', start);
-  stopBtn.addEventListener('click', stop);
-  stepBtn.addEventListener('click', step);
-  clearBtn.addEventListener('click', () => {
+  startBtn.addEventListener("click", start);
+  stopBtn.addEventListener("click", stop);
+  stepBtn.addEventListener("click", step);
+  clearBtn.addEventListener("click", () => {
     if (isRunning()) stop();
-    for (let x = 0; x < gridX; x++) for (let y = 0; y < gridY; y++) current[x][y] = false;
+    for (let x = 0; x < gridX; x++)
+      for (let y = 0; y < gridY; y++) current[x][y] = false;
+    generation = 0;
+    population = 0;
     draw();
   });
-  randomBtn.addEventListener('click', () => { if (isRunning()) stop(); randomize(); draw(); });
-  timerInput.addEventListener('change', () => {
+  randomBtn.addEventListener("click", () => {
+    if (isRunning()) stop();
+    randomize();
+    draw();
+  });
+  timerInput.addEventListener("change", () => {
     const v = parseInt(timerInput.value, 10);
     const newMs = Number.isFinite(v) ? v : 500;
-    if (isRunning()) { clearInterval(loop); loop = setInterval(step, newMs); }
+    if (isRunning()) {
+      clearInterval(loop);
+      loop = setInterval(step, newMs);
+    }
   });
 
   // +/- behavior (with exact mode) + stop+randomize semantics
-  increaseBtn.addEventListener('click', () => {
+  increaseBtn.addEventListener("click", () => {
     changeResolutionAndRandomize(() => {
       desiredResolution = desiredResolution || { cols: gridX, rows: gridY };
       if (cellSize > CELL_MIN && !desiredResolution) {
         cellSize = clamp(cellSize - CELL_STEP, CELL_MIN, CELL_MAX);
       } else {
-        desiredResolution = { cols: Math.max(MIN_COLS, Math.round(gridX * 1.2)),
-                              rows: Math.max(MIN_ROWS, Math.round(gridY * 1.2)) };
+        desiredResolution = {
+          cols: Math.max(MIN_COLS, Math.round(gridX * 1.2)),
+          rows: Math.max(MIN_ROWS, Math.round(gridY * 1.2)),
+        };
       }
     });
   });
-  decreaseBtn.addEventListener('click', () => {
+  decreaseBtn.addEventListener("click", () => {
     changeResolutionAndRandomize(() => {
       if (desiredResolution) {
-        desiredResolution = { cols: Math.max(MIN_COLS, Math.round(gridX / 1.2)),
-                              rows: Math.max(MIN_ROWS, Math.round(gridY / 1.2)) };
+        desiredResolution = {
+          cols: Math.max(MIN_COLS, Math.round(gridX / 1.2)),
+          rows: Math.max(MIN_ROWS, Math.round(gridY / 1.2)),
+        };
       } else {
         cellSize = clamp(cellSize + CELL_STEP, CELL_MIN, CELL_MAX);
       }
@@ -268,7 +349,7 @@
   // Direct resolution input
   function parseResolution(text) {
     if (!text) return null;
-    const cleaned = String(text).trim().toLowerCase().replace('×', 'x');
+    const cleaned = String(text).trim().toLowerCase().replace("×", "x");
     const m = cleaned.match(/^(\d+)\s*[x,\s]\s*(\d+)$/);
     if (!m) return null;
     const cols = parseInt(m[1], 10);
@@ -279,22 +360,54 @@
   function applyDesiredResolution(text) {
     const parsed = parseResolution(text);
     if (!parsed) return;
+
+    // Clamp parsed values to MAX_DIM and notify user if clamping occurred
+    const clampedCols = Math.min(parsed.cols, MAX_DIM);
+    const clampedRows = Math.min(parsed.rows, MAX_DIM);
+    const wasClamped =
+      clampedCols !== parsed.cols || clampedRows !== parsed.rows;
+
     changeResolutionAndRandomize(() => {
-      desiredResolution = parsed;
+      desiredResolution = { cols: clampedCols, rows: clampedRows };
     });
+
+    if (wasClamped) showMaxResModal();
   }
+
+  // Modal elements for max-resolution warning
+  const maxResModal = document.getElementById("maxResModal");
+  const modalCloseBtn = document.getElementById("modalClose");
+  let modalTimer = null;
+
+  function showMaxResModal() {
+    if (!maxResModal) return;
+    maxResModal.classList.remove("hidden");
+    if (modalTimer) clearTimeout(modalTimer);
+    modalTimer = setTimeout(hideMaxResModal, 5000);
+  }
+  function hideMaxResModal() {
+    if (!maxResModal) return;
+    maxResModal.classList.add("hidden");
+    if (modalTimer) {
+      clearTimeout(modalTimer);
+      modalTimer = null;
+    }
+  }
+  modalCloseBtn && modalCloseBtn.addEventListener("click", hideMaxResModal);
+
   if (resolutionInput) {
-    resolutionInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') applyDesiredResolution(resolutionInput.value);
+    resolutionInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") applyDesiredResolution(resolutionInput.value);
     });
-    resolutionInput.addEventListener('blur', () => {
-      if (resolutionInput.value.trim()) applyDesiredResolution(resolutionInput.value);
+    resolutionInput.addEventListener("blur", () => {
+      if (resolutionInput.value.trim())
+        applyDesiredResolution(resolutionInput.value);
     });
   }
 
   // Resize: live reflow; stop+randomize at end
   let resizeEndTimer = null;
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     if (isRunning()) stop();
     reflow({ keep: true, rand: false });
     if (resizeEndTimer) clearTimeout(resizeEndTimer);
