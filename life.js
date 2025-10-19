@@ -193,6 +193,15 @@ timerInput.addEventListener("change", () => {
 
 // ===== Resize / rotation / URL bar collapse handling =====
 function reflowAndRedraw({ randomize = false } = {}) {
+  // Stop animation if it's running
+  if (animationInterval) {
+    clearInterval(animationInterval);
+    animationInterval = null;
+    stopBtn.disabled = true;
+    startBtn.disabled = false;
+    stepBtn.disabled = false;
+  }
+
   pinBodyToVisualViewport();
   computeGridDims();
 
