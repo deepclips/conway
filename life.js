@@ -22,9 +22,31 @@
   let gridX = 1, gridY = 1;
   let current = [], next = [];
   let loop = null;
-  let desiredResolution = null; // {cols, rows} triggers exact mode
+  let desiredResolution = null; // {cols, rows} => exact mode
 
   function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+
+  function isRunning() { return !!loop; }
+
+  function start() {
+    if (loop) return;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    stepBtn.disabled = true;
+    const val = parseInt(timerInput.value, 10);
+    const timer = Number.isFinite(val) ? val : 500;
+    loop = setInterval(step, timer);
+  }
+
+  function stop() {
+    if (!loop) return;
+    clearInterval(loop);
+    loop = null;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    stepBtn.disabled = false;
+    draw();
+  }
 
   function viewportDims() {
     const ww = window.innerWidth;
@@ -70,7 +92,7 @@
     const totalH = gridY * cellSize;
     const scaleX = ww / totalW;
     const scaleY = hAvail / totalH;
-    const scale = Math.min(1, scaleX, scaleY); // never upscale, only shrink to fit
+    const scale = Math.min(1, scaleX, scaleY); // only shrink to fit
 
     let html = '<div id=\"lifeWrap\" style=\"transform:scale(' + scale.toFixed(4) + '); transform-origin:center center;\">';
     html += '<table id=\"lifeTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse:collapse;\">';
@@ -87,7 +109,7 @@
     gridContainer.innerHTML = html;
     gridContainer.appendChild(resolutionEl);
 
-    if (!loop) {
+    if (!isRunning()) {
       gridContainer.querySelectorAll('td').forEach(td => {
         td.addEventListener('click', () => {
           const x = +td.getAttribute('data-x');
@@ -182,73 +204,55 @@
     draw();
   }
 
-  function start() {
-    if (loop) return;
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    stepBtn.disabled = true;
-    const val = parseInt(timerInput.value, 10);
-    const timer = Number.isFinite(val) ? val : 500;
-    loop = setInterval(step, timer);
+  function changeResolutionAndRandomize(applyChangeFn) {
+    // Always stop and re-seed when resolution changes
+    if (isRunning()) stop();
+    applyChangeFn();
+    reflow({ keep: false, rand: true });
+    // DO NOT auto-restart
   }
 
-  function stop() {
-    if (!loop) return;
-    clearInterval(loop);
-    loop = null;
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    stepBtn.disabled = false;
-    draw();
-  }
-
+  // Controls wiring (unchanged except for stop/randomize semantics)
   startBtn.addEventListener('click', start);
   stopBtn.addEventListener('click', stop);
   stepBtn.addEventListener('click', step);
   clearBtn.addEventListener('click', () => {
+    if (isRunning()) stop();
     for (let x = 0; x < gridX; x++)
       for (let y = 0; y < gridY; y++) current[x][y] = false;
     draw();
   });
-  randomBtn.addEventListener('click', () => { randomize(); draw(); });
+  randomBtn.addEventListener('click', () => { if (isRunning()) stop(); randomize(); draw(); });
   timerInput.addEventListener('change', () => {
     const v = parseInt(timerInput.value, 10);
     const newMs = Number.isFinite(v) ? v : 500;
-    if (loop) { clearInterval(loop); loop = setInterval(step, newMs); }
+    if (isRunning()) { clearInterval(loop); loop = setInterval(step, newMs); }
   });
 
-  // "+" logic: if above min, shrink cells; if at min, bump resolution by 20% in exact mode
+  // "+" and "−" with strict stop + randomize
   increaseBtn.addEventListener('click', () => {
-    const wasRunning = !!loop;
-    stop();
-    if (cellSize > CELL_MIN && !desiredResolution) {
-      cellSize = clamp(cellSize - CELL_STEP, CELL_MIN, CELL_MAX);
-      desiredResolution = null;
-      reflow({ keep: false, rand: true });
-    } else {
-      // At minimum cell or already in exact mode: increase target resolution
-      const cols = Math.max(MIN_COLS, Math.round(gridX * 1.2));
-      const rows = Math.max(MIN_ROWS, Math.round(gridY * 1.2));
-      desiredResolution = { cols, rows };
-      reflow({ keep: false, rand: true });
-    }
-    if (wasRunning) start();
+    changeResolutionAndRandomize(() => {
+      if (cellSize > CELL_MIN && !desiredResolution) {
+        cellSize = clamp(cellSize - CELL_STEP, CELL_MIN, CELL_MAX);
+        desiredResolution = null;
+      } else {
+        const cols = Math.max(MIN_COLS, Math.round(gridX * 1.2));
+        const rows = Math.max(MIN_ROWS, Math.round(gridY * 1.2));
+        desiredResolution = { cols, rows };
+      }
+    });
   });
 
-  // "−" logic: if in exact mode, reduce resolution by ~17%; else grow cells
   decreaseBtn.addEventListener('click', () => {
-    const wasRunning = !!loop;
-    stop();
-    if (desiredResolution) {
-      const cols = Math.max(MIN_COLS, Math.round(gridX / 1.2));
-      const rows = Math.max(MIN_ROWS, Math.round(gridY / 1.2));
-      desiredResolution = { cols, rows };
-      reflow({ keep: false, rand: true });
-    } else {
-      cellSize = clamp(cellSize + CELL_STEP, CELL_MIN, CELL_MAX);
-      reflow({ keep: false, rand: true });
-    }
-    if (wasRunning) start();
+    changeResolutionAndRandomize(() => {
+      if (desiredResolution) {
+        const cols = Math.max(MIN_COLS, Math.round(gridX / 1.2));
+        const rows = Math.max(MIN_ROWS, Math.round(gridY / 1.2));
+        desiredResolution = { cols, rows };
+      } else {
+        cellSize = clamp(cellSize + CELL_STEP, CELL_MIN, CELL_MAX);
+      }
+    });
   });
 
   function parseResolution(text) {
@@ -265,11 +269,9 @@
   function applyDesiredResolution(text) {
     const parsed = parseResolution(text);
     if (!parsed) return;
-    desiredResolution = parsed;
-    const wasRunning = !!loop;
-    stop();
-    reflow({ keep: false, rand: true });
-    if (wasRunning) start();
+    changeResolutionAndRandomize(() => {
+      desiredResolution = parsed;
+    });
   }
 
   resolutionInput.addEventListener('keydown', (e) => {
@@ -279,16 +281,14 @@
     if (resolutionInput.value.trim()) applyDesiredResolution(resolutionInput.value);
   });
 
-  // Resize: live reflow, then randomize and keep exact mode if set
+  // Resize: stop and randomize at end. (During drag: live reflow without randomize.)
   let resizeEndTimer = null;
   window.addEventListener('resize', () => {
-    const wasRunning = !!loop;
-    stop();
-    reflow({ keep: true, rand: false });
+    if (isRunning()) stop();
+    reflow({ keep: true, rand: false }); // keep pattern while dragging
     if (resizeEndTimer) clearTimeout(resizeEndTimer);
     resizeEndTimer = setTimeout(() => {
-      reflow({ keep: false, rand: true });
-      if (wasRunning) start();
+      reflow({ keep: false, rand: true }); // randomize once resize ends
     }, 200);
   });
 
