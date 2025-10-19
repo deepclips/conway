@@ -181,6 +181,8 @@
           const x = +td.getAttribute("data-x");
           const y = +td.getAttribute("data-y");
           current[x][y] = !current[x][y];
+          currentPattern = null;
+          if (patternSelect) patternSelect.value = "";
           computePopulation();
           draw();
         });
@@ -191,6 +193,8 @@
             const x = +td.getAttribute("data-x");
             const y = +td.getAttribute("data-y");
             current[x][y] = !current[x][y];
+            currentPattern = null;
+            if (patternSelect) patternSelect.value = "";
             computePopulation();
             draw();
           },
@@ -305,10 +309,14 @@
       for (let y = 0; y < gridY; y++) current[x][y] = false;
     generation = 0;
     population = 0;
+    currentPattern = null;
+    if (patternSelect) patternSelect.value = "";
     draw();
   });
   randomBtn.addEventListener("click", () => {
     if (isRunning()) stop();
+    currentPattern = null;
+    if (patternSelect) patternSelect.value = "";
     randomize();
     draw();
   });
