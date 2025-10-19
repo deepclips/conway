@@ -1,10 +1,12 @@
-// Calculate grid dimensions based on window size
+// Calculate grid dimensions based on window size and visual viewport
 const BASE_CELL_SIZE = 30;
 const MOBILE_BREAKPOINT = 600;
 const CONTROLS_HEIGHT = window.innerWidth <= MOBILE_BREAKPOINT ? 180 : 90; // More space for controls on mobile
 let CELL_SIZE = window.innerWidth <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE; // Smaller cells on mobile
-let gridX = Math.floor(window.innerWidth / CELL_SIZE);
-let gridY = Math.floor((window.innerHeight - CONTROLS_HEIGHT) / CELL_SIZE);
+let gridX = Math.floor(window.visualViewport.width / CELL_SIZE);
+let gridY = Math.floor(
+  (window.visualViewport.height - CONTROLS_HEIGHT) / CELL_SIZE
+);
 let currentGrid = Array(gridX)
   .fill()
   .map(() => Array(gridY).fill(false));
@@ -14,10 +16,14 @@ let newGrid = Array(gridX)
 
 // Recalculate grid on window resize
 window.addEventListener("resize", () => {
-  CELL_SIZE = window.innerWidth <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
-  const controlsHeight = window.innerWidth <= MOBILE_BREAKPOINT ? 180 : 90;
-  gridX = Math.floor(window.innerWidth / CELL_SIZE);
-  gridY = Math.floor((window.innerHeight - controlsHeight) / CELL_SIZE);
+  CELL_SIZE =
+    window.visualViewport.width <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
+  const controlsHeight =
+    window.visualViewport.width <= MOBILE_BREAKPOINT ? 180 : 90;
+  gridX = Math.floor(window.visualViewport.width / CELL_SIZE);
+  gridY = Math.floor(
+    (window.visualViewport.height - controlsHeight) / CELL_SIZE
+  );
 
   currentGrid = Array(gridX)
     .fill()
@@ -34,6 +40,28 @@ window.addEventListener("resize", () => {
   }
 
   // Display the new grid immediately
+  displayGrid();
+});
+
+// Handle viewport changes (e.g., Android system UI showing/hiding)
+window.visualViewport.addEventListener("resize", () => {
+  CELL_SIZE =
+    window.visualViewport.width <= MOBILE_BREAKPOINT ? 20 : BASE_CELL_SIZE;
+  const controlsHeight =
+    window.visualViewport.width <= MOBILE_BREAKPOINT ? 180 : 90;
+  gridX = Math.floor(window.visualViewport.width / CELL_SIZE);
+  gridY = Math.floor(
+    (window.visualViewport.height - controlsHeight) / CELL_SIZE
+  );
+
+  // Update grid dimensions
+  currentGrid = Array(gridX)
+    .fill()
+    .map(() => Array(gridY).fill(false));
+  newGrid = Array(gridX)
+    .fill()
+    .map(() => Array(gridY).fill(false));
+
   displayGrid();
 });
 
