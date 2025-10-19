@@ -1,7 +1,8 @@
 // Calculate grid dimensions based on window size
 const CELL_SIZE = 30; // Size of each cell in pixels (doubled from 15 to 30)
+const CONTROLS_HEIGHT = 70; // px, must match CSS
 let gridX = Math.floor(window.innerWidth / CELL_SIZE);
-let gridY = Math.floor(window.innerHeight / CELL_SIZE);
+let gridY = Math.floor((window.innerHeight - CONTROLS_HEIGHT) / CELL_SIZE);
 let currentGrid = Array(gridX)
   .fill()
   .map(() => Array(gridY).fill(false));
@@ -12,7 +13,7 @@ let newGrid = Array(gridX)
 // Recalculate grid on window resize
 window.addEventListener("resize", () => {
   gridX = Math.floor(window.innerWidth / CELL_SIZE);
-  gridY = Math.floor(window.innerHeight / CELL_SIZE);
+  gridY = Math.floor((window.innerHeight - CONTROLS_HEIGHT) / CELL_SIZE);
 
   currentGrid = Array(gridX)
     .fill()
@@ -169,6 +170,7 @@ function stopAnimation() {
     startBtn.disabled = false;
     stopBtn.disabled = true;
     stepBtn.disabled = false;
+    displayGrid();
   }
 }
 
