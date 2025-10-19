@@ -24,6 +24,7 @@
   const genEl = document.getElementById("genOverlay");
   const popEl = document.getElementById("popOverlay");
   const resolutionInput = document.getElementById("resolutionInput");
+  const patternSelect = document.getElementById("patternSelect");
 
   // ---- State ----
   let cellSize = DEFAULT_CELL;
@@ -36,6 +37,7 @@
   let loop = null;
   let desiredResolution = null; // { cols, rows } if user set explicitly
   let widthPriorityActive = false; // prefer width-fit and allow vertical scroll
+  let currentPattern = null; // Track selected pattern
 
   // ---- Helpers ----
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -405,16 +407,264 @@
     });
   }
 
-  // Resize: live reflow; stop+randomize at end
+  // Resize: live reflow; preserve pattern if selected
   let resizeEndTimer = null;
   window.addEventListener("resize", () => {
     if (isRunning()) stop();
     reflow({ keep: true, rand: false });
     if (resizeEndTimer) clearTimeout(resizeEndTimer);
     resizeEndTimer = setTimeout(() => {
-      reflow({ keep: false, rand: true });
+      reflow({ keep: false, rand: !currentPattern });
+      if (currentPattern) {
+        // Clear any randomized state and insert the pattern
+        insertPattern(currentPattern);
+      }
     }, 200);
   });
+
+  // ---- Patterns ----
+  const patterns = {
+    glider: [
+      [0, 1],
+      [1, 2],
+      [2, 0],
+      [2, 1],
+      [2, 2],
+    ],
+    blinker: [
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    block: [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+    ],
+    beehive: [
+      [0, 1],
+      [0, 2],
+      [1, 0],
+      [1, 3],
+      [2, 1],
+      [2, 2],
+    ],
+    loaf: [
+      [0, 1],
+      [0, 2],
+      [1, 0],
+      [1, 3],
+      [2, 1],
+      [2, 3],
+      [3, 2],
+    ],
+    boat: [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 2],
+      [2, 1],
+    ],
+    toad: [
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [1, 0],
+      [1, 1],
+      [1, 2],
+    ],
+    beacon: [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [2, 2],
+      [2, 3],
+      [3, 2],
+      [3, 3],
+    ],
+    pulsar: [
+      [2, 0],
+      [3, 0],
+      [4, 0],
+      [8, 0],
+      [9, 0],
+      [10, 0],
+      [0, 2],
+      [5, 2],
+      [7, 2],
+      [12, 2],
+      [0, 3],
+      [5, 3],
+      [7, 3],
+      [12, 3],
+      [0, 4],
+      [5, 4],
+      [7, 4],
+      [12, 4],
+      [2, 5],
+      [3, 5],
+      [4, 5],
+      [8, 5],
+      [9, 5],
+      [10, 5],
+      [2, 7],
+      [3, 7],
+      [4, 7],
+      [8, 7],
+      [9, 7],
+      [10, 7],
+      [0, 8],
+      [5, 8],
+      [7, 8],
+      [12, 8],
+      [0, 9],
+      [5, 9],
+      [7, 9],
+      [12, 9],
+      [0, 10],
+      [5, 10],
+      [7, 10],
+      [12, 10],
+      [2, 12],
+      [3, 12],
+      [4, 12],
+      [8, 12],
+      [9, 12],
+      [10, 12],
+    ],
+    pentadecathlon: [
+      [0, 1],
+      [1, 1],
+      [2, 0],
+      [2, 2],
+      [3, 1],
+      [4, 1],
+      [5, 1],
+      [6, 1],
+      [7, 0],
+      [7, 2],
+      [8, 1],
+      [9, 1],
+    ],
+    gliderGun: [
+      [0, 2],
+      [0, 3],
+      [1, 2],
+      [1, 3],
+      [8, 3],
+      [8, 4],
+      [9, 2],
+      [9, 4],
+      [10, 2],
+      [10, 3],
+      [16, 4],
+      [16, 5],
+      [16, 6],
+      [17, 4],
+      [18, 5],
+      [22, 1],
+      [22, 2],
+      [23, 0],
+      [23, 2],
+      [24, 0],
+      [24, 1],
+      [24, 12],
+      [24, 13],
+      [25, 12],
+      [25, 14],
+      [26, 12],
+      [34, 0],
+      [34, 1],
+      [35, 0],
+      [35, 1],
+      [35, 7],
+      [35, 8],
+      [35, 9],
+      [36, 7],
+      [37, 8],
+    ],
+    lightweightSpaceship: [
+      [0, 0],
+      [0, 3],
+      [1, 4],
+      [2, 0],
+      [2, 4],
+      [3, 1],
+      [3, 2],
+      [3, 3],
+      [3, 4],
+    ],
+    diehard: [
+      [0, 6],
+      [1, 0],
+      [1, 1],
+      [2, 1],
+      [2, 5],
+      [2, 6],
+      [2, 7],
+    ],
+    acorn: [
+      [0, 1],
+      [1, 3],
+      [2, 0],
+      [2, 1],
+      [2, 4],
+      [2, 5],
+      [2, 6],
+    ],
+  };
+
+  function insertPattern(pattern) {
+    // Clear grid (using same logic as clear button)
+    for (let x = 0; x < gridX; x++)
+      for (let y = 0; y < gridY; y++) current[x][y] = false;
+    generation = 0;
+
+    if (!patterns[pattern]) return;
+
+    // Calculate center position
+    const centerX = Math.floor(gridX / 2);
+    const centerY = Math.floor(gridY / 2);
+
+    // Get pattern bounds
+    const coords = patterns[pattern];
+    const minX = Math.min(...coords.map((c) => c[0]));
+    const maxX = Math.max(...coords.map((c) => c[0]));
+    const minY = Math.min(...coords.map((c) => c[1]));
+    const maxY = Math.max(...coords.map((c) => c[1]));
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+
+    // Calculate offset to center the pattern
+    const offsetX = centerX - Math.floor(width / 2);
+    const offsetY = centerY - Math.floor(height / 2);
+
+    // Place the pattern
+    coords.forEach(([x, y]) => {
+      const newX = x + offsetX;
+      const newY = y + offsetY;
+      if (newX >= 0 && newX < gridX && newY >= 0 && newY < gridY) {
+        current[newX][newY] = 1;
+      }
+    });
+
+    computePopulation();
+    draw();
+  }
+
+  if (patternSelect) {
+    patternSelect.addEventListener("change", (e) => {
+      const pattern = e.target.value;
+      if (pattern) {
+        currentPattern = pattern;
+        insertPattern(pattern);
+      } else {
+        currentPattern = null;
+      }
+    });
+  }
 
   // ---- Init ----
   reflow({ keep: false, rand: true });
