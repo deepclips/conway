@@ -314,11 +314,13 @@
     draw();
   });
   randomBtn.addEventListener("click", () => {
-    if (isRunning()) stop();
+    const wasRunning = isRunning();
+    if (wasRunning) stop();
     currentPattern = null;
     if (patternSelect) patternSelect.value = "";
     randomize();
     draw();
+    if (wasRunning) start();
   });
   timerInput.addEventListener("change", () => {
     const v = parseInt(timerInput.value, 10);
