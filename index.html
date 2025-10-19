@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
+    />
+    <title>Life</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="gridContainer"></div>
+
+    <div id="controls">
+      <div class="button-pair">
+        <button id="startBtn">Start</button>
+        <button id="stopBtn">Stop</button>
+      </div>
+      <div class="button-pair">
+        <button id="stepBtn">Step</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+      <div class="button-pair">
+        <button id="randomBtn">Randomize</button>
+        <div class="timer-group">
+          <label for="timerInput">Timer (ms):</label>
+          <input
+            id="timerInput"
+            type="number"
+            min="50"
+            max="5000"
+            value="500"
+          />
+        </div>
+      </div>
+    </div>
+
+    <script src="life.js"></script>
+  </body>
+</html>

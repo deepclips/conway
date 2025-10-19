@@ -1,0 +1,146 @@
+/* Base layout */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  /* Use dynamic viewport height on mobile; fallback to 100vh */
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  background: black;
+  box-sizing: border-box;
+  /* Avoid overlap with Android/iOS system bars */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  /* We'll keep scroll disabled; JS pins body height to visual viewport */
+  overflow: hidden;
+}
+
+/* Grid area grows to fill remaining space above controls */
+#gridContainer {
+  flex: 1 1 auto;
+  width: 100vw;
+  height: 100%;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Controls bar */
+#controls {
+  flex: 0 0 auto;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background: #333;
+  color: white;
+  border: 1.5px solid #666;
+  border-radius: 6px;
+  transition: background 0.2s;
+  outline: none;
+  box-sizing: border-box;
+  min-width: 130px;
+  touch-action: manipulation;
+}
+
+button:hover,
+#timerInput:focus {
+  background: #444;
+}
+
+button:disabled {
+  background: #222;
+  cursor: not-allowed;
+}
+
+#timerInput {
+  padding: 8px;
+  font-size: 16px;
+  background: #333;
+  color: white;
+  border: 1.5px solid #666;
+  border-radius: 6px;
+  width: 80px;
+  text-align: center;
+}
+
+label {
+  color: white;
+  font-size: 16px;
+}
+
+.button-pair {
+  display: flex;
+  gap: 8px;
+}
+
+.timer-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 600px) {
+  /* iOS quirk fallback */
+  body {
+    height: -webkit-fill-available;
+  }
+
+  #controls {
+    padding: 16px;
+    /* Respect safe area / gesture bar */
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+  }
+
+  .button-pair {
+    width: 100%;
+    max-width: 400px;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .button-pair:last-child {
+    margin-bottom: 0;
+  }
+
+  .button-pair button {
+    flex: 1;
+    min-height: 48px;
+    font-size: 18px;
+    padding: 15px;
+  }
+
+  .timer-group {
+    width: 100%;
+    justify-content: center;
+    padding: 4px 0;
+  }
+
+  #timerInput {
+    width: 100px;
+    margin: 0 8px;
+  }
+}
