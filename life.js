@@ -22,7 +22,7 @@
   let gridX = 1, gridY = 1;
   let current = [], next = [];
   let loop = null;
-  let desiredResolution = null;
+  let desiredResolution = null; // {cols, rows} triggers exact mode
 
   function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
@@ -38,14 +38,16 @@
     const { ww, hAvail } = viewportDims();
     let gx = Math.max(1, Math.floor(ww / cellSize));
     let gy = Math.max(1, Math.floor(hAvail / cellSize));
+
     if (gx < MIN_COLS || gy < MIN_ROWS) {
-      const fitCellFromWidth = Math.floor(ww / MIN_COLS);
+      const fitCellFromWidth  = Math.floor(ww / MIN_COLS);
       const fitCellFromHeight = Math.floor(hAvail / MIN_ROWS);
       const newCell = clamp(Math.min(fitCellFromWidth, fitCellFromHeight), CELL_MIN, CELL_MAX);
       if (newCell !== cellSize) cellSize = newCell;
       gx = Math.max(1, Math.floor(ww / cellSize));
       gy = Math.max(1, Math.floor(hAvail / cellSize));
     }
+
     cellSize = clamp(cellSize, CELL_MIN, CELL_MAX);
     gridX = gx;
     gridY = gy;
@@ -54,7 +56,7 @@
 
   function initArrays() {
     current = Array.from({ length: gridX }, () => Array(gridY).fill(false));
-    next = Array.from({ length: gridX }, () => Array(gridY).fill(false));
+    next    = Array.from({ length: gridX }, () => Array(gridY).fill(false));
   }
 
   function updateResolutionLabel() {
@@ -63,18 +65,28 @@
   }
 
   function draw() {
-    let html = '<table border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">';
+    const { ww, hAvail } = viewportDims();
+    const totalW = gridX * cellSize;
+    const totalH = gridY * cellSize;
+    const scaleX = ww / totalW;
+    const scaleY = hAvail / totalH;
+    const scale = Math.min(1, scaleX, scaleY); // never upscale, only shrink to fit
+
+    let html = '<div id=\"lifeWrap\" style=\"transform:scale(' + scale.toFixed(4) + '); transform-origin:center center;\">';
+    html += '<table id=\"lifeTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse:collapse;\">';
     for (let y = 0; y < gridY; y++) {
       html += '<tr>';
       for (let x = 0; x < gridX; x++) {
         const alive = current[x][y];
-        html += '<td data-x="' + x + '" data-y="' + y + '" style="width:' + cellSize + 'px;height:' + cellSize + 'px;padding:0;background:' + (alive ? '#000' : '#fff') + '"></td>';
+        html += '<td data-x=\"' + x + '\" data-y=\"' + y + '\" style=\"width:' + cellSize + 'px;height:' + cellSize + 'px;padding:0;background:' + (alive ? '#000' : '#fff') + '\"></td>';
       }
       html += '</tr>';
     }
-    html += '</table>';
+    html += '</table></div>';
+
     gridContainer.innerHTML = html;
     gridContainer.appendChild(resolutionEl);
+
     if (!loop) {
       gridContainer.querySelectorAll('td').forEach(td => {
         td.addEventListener('click', () => {
@@ -83,6 +95,13 @@
           current[x][y] = !current[x][y];
           draw();
         });
+        td.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const x = +td.getAttribute('data-x');
+          const y = +td.getAttribute('data-y');
+          current[x][y] = !current[x][y];
+          draw();
+        }, { passive: false });
       });
     }
     updateResolutionLabel();
@@ -134,6 +153,7 @@
     const old = current;
     const oldX = old.length;
     const oldY = oldX ? old[0].length : 0;
+
     if (desiredResolution) {
       const { ww, hAvail } = viewportDims();
       const cols = Math.max(MIN_COLS, desiredResolution.cols | 0);
@@ -145,7 +165,9 @@
     } else {
       computeDims();
     }
+
     initArrays();
+
     if (rand || !keep || !oldX) {
       randomize();
     } else {
@@ -195,21 +217,37 @@
     if (loop) { clearInterval(loop); loop = setInterval(step, newMs); }
   });
 
+  // "+" logic: if above min, shrink cells; if at min, bump resolution by 20% in exact mode
   increaseBtn.addEventListener('click', () => {
-    desiredResolution = null;
-    cellSize = clamp(cellSize - CELL_STEP, CELL_MIN, CELL_MAX);
     const wasRunning = !!loop;
     stop();
-    reflow({ keep: false, rand: true });
+    if (cellSize > CELL_MIN && !desiredResolution) {
+      cellSize = clamp(cellSize - CELL_STEP, CELL_MIN, CELL_MAX);
+      desiredResolution = null;
+      reflow({ keep: false, rand: true });
+    } else {
+      // At minimum cell or already in exact mode: increase target resolution
+      const cols = Math.max(MIN_COLS, Math.round(gridX * 1.2));
+      const rows = Math.max(MIN_ROWS, Math.round(gridY * 1.2));
+      desiredResolution = { cols, rows };
+      reflow({ keep: false, rand: true });
+    }
     if (wasRunning) start();
   });
 
+  // "−" logic: if in exact mode, reduce resolution by ~17%; else grow cells
   decreaseBtn.addEventListener('click', () => {
-    desiredResolution = null;
-    cellSize = clamp(cellSize + CELL_STEP, CELL_MIN, CELL_MAX);
     const wasRunning = !!loop;
     stop();
-    reflow({ keep: false, rand: true });
+    if (desiredResolution) {
+      const cols = Math.max(MIN_COLS, Math.round(gridX / 1.2));
+      const rows = Math.max(MIN_ROWS, Math.round(gridY / 1.2));
+      desiredResolution = { cols, rows };
+      reflow({ keep: false, rand: true });
+    } else {
+      cellSize = clamp(cellSize + CELL_STEP, CELL_MIN, CELL_MAX);
+      reflow({ keep: false, rand: true });
+    }
     if (wasRunning) start();
   });
 
@@ -241,6 +279,7 @@
     if (resolutionInput.value.trim()) applyDesiredResolution(resolutionInput.value);
   });
 
+  // Resize: live reflow, then randomize and keep exact mode if set
   let resizeEndTimer = null;
   window.addEventListener('resize', () => {
     const wasRunning = !!loop;
@@ -253,6 +292,7 @@
     }, 200);
   });
 
+  // Init
   reflow({ keep: false, rand: true });
   stop();
 })();
