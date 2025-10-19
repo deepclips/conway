@@ -1,10 +1,13 @@
 (function () {
-  const CELL_MIN = 3;
-  const CELL_MAX = 80;
+  // ---- Config ----
+  const CELL_MIN = 3;      // 3px min => max density
+  const CELL_MAX = 80;     // generous upper bound
   const CELL_STEP = 2;
   const DEFAULT_CELL = 20;
   const MIN_COLS = 5, MIN_ROWS = 5;
+  const WIDTH_NARROW_THRESHOLD = 0.5; // 50% of viewport width
 
+  // ---- Elements ----
   const gridContainer = document.getElementById('gridContainer');
   const controlsEl = document.getElementById('controls');
   const startBtn = document.getElementById('startBtn');
@@ -18,15 +21,17 @@
   const resolutionEl = document.getElementById('resolutionOverlay');
   const resolutionInput = document.getElementById('resolutionInput');
 
+  // ---- State ----
   let cellSize = DEFAULT_CELL;
   let gridX = 1, gridY = 1;
   let current = [], next = [];
   let loop = null;
-  let desiredResolution = null; // {cols, rows} => exact mode
+  let desiredResolution = null; // { cols, rows } if user set explicitly
+  let widthPriorityActive = false; // prefer width-fit and allow vertical scroll
 
-  function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
-
-  function isRunning() { return !!loop; }
+  // ---- Helpers ----
+  const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+  const isRunning = () => !!loop;
 
   function start() {
     if (loop) return;
@@ -37,7 +42,6 @@
     const timer = Number.isFinite(val) ? val : 500;
     loop = setInterval(step, timer);
   }
-
   function stop() {
     if (!loop) return;
     clearInterval(loop);
@@ -60,7 +64,6 @@
     const { ww, hAvail } = viewportDims();
     let gx = Math.max(1, Math.floor(ww / cellSize));
     let gy = Math.max(1, Math.floor(hAvail / cellSize));
-
     if (gx < MIN_COLS || gy < MIN_ROWS) {
       const fitCellFromWidth  = Math.floor(ww / MIN_COLS);
       const fitCellFromHeight = Math.floor(hAvail / MIN_ROWS);
@@ -69,7 +72,6 @@
       gx = Math.max(1, Math.floor(ww / cellSize));
       gy = Math.max(1, Math.floor(hAvail / cellSize));
     }
-
     cellSize = clamp(cellSize, CELL_MIN, CELL_MAX);
     gridX = gx;
     gridY = gy;
@@ -92,15 +94,25 @@
     const totalH = gridY * cellSize;
     const scaleX = ww / totalW;
     const scaleY = hAvail / totalH;
-    const scale = Math.min(1, scaleX, scaleY); // only shrink to fit
 
-    let html = '<div id=\"lifeWrap\" style=\"transform:scale(' + scale.toFixed(4) + '); transform-origin:center center;\">';
-    html += '<table id=\"lifeTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse:collapse;\">';
+    let scale;
+    if (widthPriorityActive) {
+      // Fill width; allow vertical overflow/scroll
+      scale = Math.min(1, scaleX);
+      gridContainer.style.overflow = 'auto';
+    } else {
+      // Default: uniform fit
+      scale = Math.min(1, scaleX, scaleY);
+      gridContainer.style.overflow = 'hidden';
+    }
+
+    let html = '<div id="lifeWrap" style="transform:scale(' + scale.toFixed(4) + '); transform-origin:center center;">';
+    html += '<table id="lifeTable" border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">';
     for (let y = 0; y < gridY; y++) {
       html += '<tr>';
       for (let x = 0; x < gridX; x++) {
         const alive = current[x][y];
-        html += '<td data-x=\"' + x + '\" data-y=\"' + y + '\" style=\"width:' + cellSize + 'px;height:' + cellSize + 'px;padding:0;background:' + (alive ? '#000' : '#fff') + '\"></td>';
+        html += '<td data-x="' + x + '" data-y="' + y + '" style="width:' + cellSize + 'px;height:' + cellSize + 'px;padding:0;background:' + (alive ? '#000' : '#fff') + '"></td>';
       }
       html += '</tr>';
     }
@@ -129,15 +141,15 @@
     updateResolutionLabel();
   }
 
-  function val(x, y) {
+  // Game of Life helpers
+  const val = (x, y) => {
     if (x < 0) x = gridX - 1;
     if (x >= gridX) x = 0;
     if (y < 0) y = gridY - 1;
     if (y >= gridY) y = 0;
     return current[x][y];
-  }
-
-  function neighbors(x, y) {
+  };
+  const neighbors = (x, y) => {
     let c = 0;
     for (let i = x - 1; i <= x + 1; i++) {
       for (let j = y - 1; j <= y + 1; j++) {
@@ -146,17 +158,14 @@
       }
     }
     return c;
-  }
+  };
 
   function step() {
     for (let x = 0; x < gridX; x++) {
       for (let y = 0; y < gridY; y++) {
         const n = neighbors(x, y);
-        if (current[x][y]) {
-          next[x][y] = !(n < 2 || n > 3);
-        } else {
-          next[x][y] = n === 3;
-        }
+        if (current[x][y]) next[x][y] = !(n < 2 || n > 3);
+        else               next[x][y] = n === 3;
       }
     }
     const tmp = current; current = next; next = tmp;
@@ -164,23 +173,35 @@
   }
 
   function randomize() {
-    for (let x = 0; x < gridX; x++) {
-      for (let y = 0; y < gridY; y++) {
-        current[x][y] = Math.random() < 0.5;
-      }
-    }
+    for (let x = 0; x < gridX; x++) for (let y = 0; y < gridY; y++) current[x][y] = Math.random() < 0.5;
   }
 
   function reflow({ keep = true, rand = false } = {}) {
     const old = current;
     const oldX = old.length;
     const oldY = oldX ? old[0].length : 0;
+    const { ww, hAvail } = viewportDims();
+
+    widthPriorityActive = false;
 
     if (desiredResolution) {
-      const { ww, hAvail } = viewportDims();
       const cols = Math.max(MIN_COLS, desiredResolution.cols | 0);
       const rows = Math.max(MIN_ROWS, desiredResolution.rows | 0);
-      cellSize = clamp(Math.floor(Math.min(ww / cols, hAvail / rows)), CELL_MIN, CELL_MAX);
+
+      // Two candidate cell sizes:
+      const cellByHeight = Math.floor(hAvail / rows);
+      const cellByWidth  = Math.floor(ww / cols);
+      // Width if we fit by height:
+      const widthIfByHeight = cols * cellByHeight;
+
+      // If height-fit would make visible width < threshold, prefer width-fit
+      if (widthIfByHeight < ww * WIDTH_NARROW_THRESHOLD) {
+        cellSize = clamp(cellByWidth, CELL_MIN, CELL_MAX);
+        widthPriorityActive = true;  // draw() will allow vertical scroll
+      } else {
+        cellSize = clamp(cellByHeight, CELL_MIN, CELL_MAX);
+      }
+
       gridX = cols;
       gridY = rows;
       gridContainer.style.height = hAvail + 'px';
@@ -190,36 +211,28 @@
 
     initArrays();
 
-    if (rand || !keep || !oldX) {
-      randomize();
-    } else {
+    if (rand || !keep || !oldX) randomize();
+    else {
       const cx = Math.min(oldX, gridX);
       const cy = Math.min(oldY, gridY);
-      for (let x = 0; x < cx; x++) {
-        for (let y = 0; y < cy; y++) {
-          current[x][y] = old[x][y];
-        }
-      }
+      for (let x = 0; x < cx; x++) for (let y = 0; y < cy; y++) current[x][y] = old[x][y];
     }
     draw();
   }
 
   function changeResolutionAndRandomize(applyChangeFn) {
-    // Always stop and re-seed when resolution changes
     if (isRunning()) stop();
     applyChangeFn();
     reflow({ keep: false, rand: true });
-    // DO NOT auto-restart
   }
 
-  // Controls wiring (unchanged except for stop/randomize semantics)
+  // Controls
   startBtn.addEventListener('click', start);
   stopBtn.addEventListener('click', stop);
   stepBtn.addEventListener('click', step);
   clearBtn.addEventListener('click', () => {
     if (isRunning()) stop();
-    for (let x = 0; x < gridX; x++)
-      for (let y = 0; y < gridY; y++) current[x][y] = false;
+    for (let x = 0; x < gridX; x++) for (let y = 0; y < gridY; y++) current[x][y] = false;
     draw();
   });
   randomBtn.addEventListener('click', () => { if (isRunning()) stop(); randomize(); draw(); });
@@ -229,32 +242,30 @@
     if (isRunning()) { clearInterval(loop); loop = setInterval(step, newMs); }
   });
 
-  // "+" and "−" with strict stop + randomize
+  // +/- behavior (with exact mode) + stop+randomize semantics
   increaseBtn.addEventListener('click', () => {
     changeResolutionAndRandomize(() => {
+      desiredResolution = desiredResolution || { cols: gridX, rows: gridY };
       if (cellSize > CELL_MIN && !desiredResolution) {
         cellSize = clamp(cellSize - CELL_STEP, CELL_MIN, CELL_MAX);
-        desiredResolution = null;
       } else {
-        const cols = Math.max(MIN_COLS, Math.round(gridX * 1.2));
-        const rows = Math.max(MIN_ROWS, Math.round(gridY * 1.2));
-        desiredResolution = { cols, rows };
+        desiredResolution = { cols: Math.max(MIN_COLS, Math.round(gridX * 1.2)),
+                              rows: Math.max(MIN_ROWS, Math.round(gridY * 1.2)) };
       }
     });
   });
-
   decreaseBtn.addEventListener('click', () => {
     changeResolutionAndRandomize(() => {
       if (desiredResolution) {
-        const cols = Math.max(MIN_COLS, Math.round(gridX / 1.2));
-        const rows = Math.max(MIN_ROWS, Math.round(gridY / 1.2));
-        desiredResolution = { cols, rows };
+        desiredResolution = { cols: Math.max(MIN_COLS, Math.round(gridX / 1.2)),
+                              rows: Math.max(MIN_ROWS, Math.round(gridY / 1.2)) };
       } else {
         cellSize = clamp(cellSize + CELL_STEP, CELL_MIN, CELL_MAX);
       }
     });
   });
 
+  // Direct resolution input
   function parseResolution(text) {
     if (!text) return null;
     const cleaned = String(text).trim().toLowerCase().replace('×', 'x');
@@ -265,7 +276,6 @@
     if (!Number.isFinite(cols) || !Number.isFinite(rows)) return null;
     return { cols: Math.max(MIN_COLS, cols), rows: Math.max(MIN_ROWS, rows) };
   }
-
   function applyDesiredResolution(text) {
     const parsed = parseResolution(text);
     if (!parsed) return;
@@ -273,26 +283,27 @@
       desiredResolution = parsed;
     });
   }
+  if (resolutionInput) {
+    resolutionInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') applyDesiredResolution(resolutionInput.value);
+    });
+    resolutionInput.addEventListener('blur', () => {
+      if (resolutionInput.value.trim()) applyDesiredResolution(resolutionInput.value);
+    });
+  }
 
-  resolutionInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') applyDesiredResolution(resolutionInput.value);
-  });
-  resolutionInput.addEventListener('blur', () => {
-    if (resolutionInput.value.trim()) applyDesiredResolution(resolutionInput.value);
-  });
-
-  // Resize: stop and randomize at end. (During drag: live reflow without randomize.)
+  // Resize: live reflow; stop+randomize at end
   let resizeEndTimer = null;
   window.addEventListener('resize', () => {
     if (isRunning()) stop();
-    reflow({ keep: true, rand: false }); // keep pattern while dragging
+    reflow({ keep: true, rand: false });
     if (resizeEndTimer) clearTimeout(resizeEndTimer);
     resizeEndTimer = setTimeout(() => {
-      reflow({ keep: false, rand: true }); // randomize once resize ends
+      reflow({ keep: false, rand: true });
     }, 200);
   });
 
-  // Init
+  // ---- Init ----
   reflow({ keep: false, rand: true });
   stop();
 })();
