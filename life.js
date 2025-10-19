@@ -191,8 +191,9 @@ for (let x = 0; x < gridX; x++) {
 } // Initial display
 displayGrid();
 
-// Add a clear button
+// Add a clear button and randomize button
 const clearBtn = document.getElementById("clearBtn");
+const randomBtn = document.getElementById("randomBtn");
 
 function clearGrid() {
   for (let x = 0; x < gridX; x++) {
@@ -203,11 +204,21 @@ function clearGrid() {
   displayGrid();
 }
 
+function randomizeGrid() {
+  for (let x = 0; x < gridX; x++) {
+    for (let y = 0; y < gridY; y++) {
+      currentGrid[x][y] = Math.random() < 0.5;
+    }
+  }
+  displayGrid();
+}
+
 // Set up button event listeners
 startBtn.addEventListener("click", startAnimation);
 stopBtn.addEventListener("click", stopAnimation);
 stepBtn.addEventListener("click", step);
 clearBtn && clearBtn.addEventListener("click", clearGrid);
+randomBtn && randomBtn.addEventListener("click", randomizeGrid);
 
 // Initialize in paused state
 stopBtn.disabled = true;
