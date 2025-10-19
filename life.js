@@ -283,14 +283,22 @@
 
     initArrays();
 
-    if (rand || !keep || !oldX) randomize();
-    else {
+    if (rand || !keep || !oldX) {
+      if (!currentPattern) {
+        randomize();
+      }
+    } else {
       const cx = Math.min(oldX, gridX);
       const cy = Math.min(oldY, gridY);
       for (let x = 0; x < cx; x++)
         for (let y = 0; y < cy; y++) current[x][y] = old[x][y];
     }
-    draw();
+
+    if (currentPattern) {
+      insertPattern(currentPattern);
+    } else {
+      draw();
+    }
   }
 
   function changeResolutionAndRandomize(applyChangeFn) {
